@@ -2,20 +2,52 @@ import styled from "styled-components";
 import React, { useEffect, useState } from "react";
 
 export function usePokemon(query) {
-  const [pokemon, setPokemon] = useState(null);
+  const [{ data, status, errors }, setPokemon] = useState({
+    data: null,
+    status: 'idle',
+    errors: null
+  });
+  
   useEffect(() => {
+    setPokemon({
+      data: null,
+      status: 'pending',
+      errors: null
+    })
     fetch(`https://pokeapi.co/api/v2/pokemon/${query}`)
-      .then(r => r.json())
-      .then(setPokemon);
+      .then(r => {
+        if (r.ok) {
+          return r.json()
+        } else {
+          return r.text().then(err => {
+            throw err
+          })
+        }
+      })
+      .then(pokemon => {
+        setPokemon({
+          data: pokemon,
+          status: 'fulfilled',
+          errors: null
+        })
+      })
+      .catch(err => {
+        setPokemon({
+          data: null,
+          status: 'rejected',
+          errors: [err]
+        })
+      })
   }, [query]);
 
-  return ({ data: pokemon })
+  return ({ data, status, errors })
 }
 
 function Pokemon({ query }) {
-  const pokemon = usePokemon(query)
+  const { data: pokemon, status, errors } = usePokemon(query)
 
-  if (!pokemon) return <h3>Loading...</h3>;
+  if (status === 'rejected') return <h3>Error : {errors[0]}</h3>
+  if (status !== 'fulfilled') return <h3>Loading...</h3>;
 
   return (
     <div>
